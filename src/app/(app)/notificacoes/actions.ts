@@ -1,0 +1,2 @@
+"use server";import{revalidatePath}from"next/cache";import{z}from"zod";import{requirePermission}from"@/lib/auth";import{createClient}from"@/lib/supabase/server";
+export async function readNotification(form:FormData){const{user}=await requirePermission("alert.read");const id=z.uuid().parse(form.get("id")),supabase=await createClient(),{error}=await supabase.from("notifications").update({status:"read",read_at:new Date().toISOString()}).eq("id",id).eq("user_id",user.id);if(error)throw new Error("Não foi possível marcar a notificação");revalidatePath("/notificacoes")}

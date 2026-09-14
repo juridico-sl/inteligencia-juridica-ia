@@ -1,0 +1,6 @@
+.pytest_cache
+.pytest_cache/**
+services/**
+supabase/**
+e2e/**
+tests/**

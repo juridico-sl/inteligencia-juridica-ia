@@ -1,0 +1,2 @@
+import{PageHeader}from"@/components/ui";import{GlobalSearch}from"@/components/global-search";import{requirePermission}from"@/lib/auth";
+export default async function SearchPage({searchParams}:{searchParams:Promise<{q?:string}>}){await requirePermission("process.read");return <><PageHeader title="Pesquisa Global" description="Processos, partes, documentos, movimentações, notas, tarefas e conhecimento."/><GlobalSearch initial={(await searchParams).q}/></>}

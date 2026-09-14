@@ -1,0 +1,13 @@
+import { PageHeader, EmptyState } from "@/components/ui";
+import { requirePermission } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import { createCompany, createUnit } from "./actions";
+
+export default async function CompaniesPage() {
+  await requirePermission("process.read"); const supabase = await createClient();
+  const [{ data: companies }, { data: units }] = await Promise.all([supabase.from("companies").select("id,legal_name,trade_name,cnpj,active").is("deleted_at",null).order("legal_name"),supabase.from("business_units").select("id,name,kind,cnpj,city,state,company_id,companies(trade_name,legal_name)").is("deleted_at",null).order("name")]);
+  return <><PageHeader title="Empresas e unidades" description="Entidades internas usadas em processos, riscos e relatórios." />
+    <div className="mb-5 grid gap-4 lg:grid-cols-2"><form action={createCompany} className="card grid gap-3 p-4"><h2 className="font-black">Nova empresa</h2><input className="field" name="legal_name" placeholder="Razão social" required/><input className="field" name="trade_name" placeholder="Nome fantasia"/><input className="field" name="cnpj" placeholder="CNPJ"/><button className="button">Cadastrar empresa</button></form>
+    <form action={createUnit} className="card grid gap-3 p-4"><h2 className="font-black">Nova unidade</h2><select className="field" name="company_id" required><option value="">Empresa</option>{(companies??[]).map(c=><option key={c.id} value={c.id}>{c.trade_name??c.legal_name}</option>)}</select><div className="grid grid-cols-2 gap-3"><input className="field" name="name" placeholder="Nome" required/><select className="field" name="kind"><option value="unit">Unidade</option><option value="branch">Filial</option><option value="base">Base</option></select></div><div className="grid grid-cols-3 gap-3"><input className="field" name="cnpj" placeholder="CNPJ"/><input className="field" name="city" placeholder="Cidade"/><input className="field" name="state" maxLength={2} placeholder="UF" required/></div><button className="button">Cadastrar unidade</button></form></div>
+    <section className="card table-wrap">{(units??[]).length===0?<EmptyState>Nenhuma unidade cadastrada.</EmptyState>:<table><thead><tr><th>Empresa</th><th>Unidade</th><th>Tipo</th><th>CNPJ</th><th>Local</th></tr></thead><tbody>{(units??[]).map(u=>{const c=u.companies as unknown as {trade_name?:string;legal_name?:string}|null; return <tr key={u.id}><td>{c?.trade_name??c?.legal_name}</td><td className="font-bold">{u.name}</td><td>{u.kind}</td><td>{u.cnpj??"—"}</td><td>{[u.city,u.state].filter(Boolean).join("/")||"—"}</td></tr>})}</tbody></table>}</section></>;
+}

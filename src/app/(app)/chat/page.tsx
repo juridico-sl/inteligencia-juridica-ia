@@ -1,0 +1,2 @@
+import{PageHeader}from"@/components/ui";import{Chat}from"@/components/chat";import{requirePermission}from"@/lib/auth";
+export default async function ChatPage({searchParams}:{searchParams:Promise<{process_id?:string}>}){await requirePermission("ai.use");const{process_id}=await searchParams;return <><PageHeader title="Chat Jurídico IA" description="Copiloto com ferramentas, fontes e confirmação humana."/><Chat processId={process_id}/></>}

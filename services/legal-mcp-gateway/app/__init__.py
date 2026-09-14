@@ -1,0 +1,1 @@
+"""Internal legal MCP gateway."""

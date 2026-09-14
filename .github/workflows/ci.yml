@@ -1,0 +1,72 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [master]
+permissions:
+  contents: read
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+      SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
+      MIMO_API_KEY: ci-placeholder
+      MIMO_MODEL: ci-placeholder
+      MIMO_EMBEDDING_MODEL: ci-placeholder
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+  gateway:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: services/legal-mcp-gateway } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.13", cache: pip, cache-dependency-path: services/legal-mcp-gateway/requirements*.txt }
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      - run: pytest -q
+      - run: python -m compileall -q app
+      - run: pip-audit -r requirements.txt
+  database:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with: { version: 2.117.0 }
+      - run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor
+      - run: supabase db reset
+      - run: supabase db lint --level warning
+      - run: supabase test db
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: Export local Supabase configuration
+        shell: bash
+        run: |
+          eval "$(supabase status -o env)"
+          echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY" >> "$GITHUB_ENV"
+          echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000" >> "$GITHUB_ENV"
+          echo "MIMO_API_KEY=e2e-placeholder" >> "$GITHUB_ENV"
+          echo "MIMO_MODEL=mimo-e2e" >> "$GITHUB_ENV"
+          echo "MIMO_EMBEDDING_MODEL=embedding-e2e" >> "$GITHUB_ENV"
+          echo "MIMO_BASE_URL=http://127.0.0.1:4010/v1" >> "$GITHUB_ENV"
+          echo "ANTIVIRUS_URL=http://127.0.0.1:4010/scan" >> "$GITHUB_ENV"
+      - run: node scripts/seed-e2e.mjs
+      - name: Start isolated provider fixtures
+        shell: bash
+        run: node scripts/e2e-services.mjs > e2e-services.log 2>&1 &
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+        env: { E2E_AUTH: "true", CI: "true" }

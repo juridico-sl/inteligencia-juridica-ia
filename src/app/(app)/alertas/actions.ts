@@ -1,0 +1,3 @@
+"use server";
+import { revalidatePath } from "next/cache";import { z } from "zod";import { requirePermission } from "@/lib/auth";import { audit } from "@/lib/security";import { createClient } from "@/lib/supabase/server";
+export async function acknowledgeAlert(form:FormData){const {user}=await requirePermission("alert.read");const id=z.uuid().parse(form.get("id"));const supabase=await createClient();const {error}=await supabase.from("alerts").update({acknowledged_at:new Date().toISOString(),acknowledged_by:user.id}).eq("id",id);if(error)throw new Error("Não foi possível reconhecer alerta");await audit("acknowledge","alert",id);revalidatePath("/alertas");revalidatePath("/hoje");}

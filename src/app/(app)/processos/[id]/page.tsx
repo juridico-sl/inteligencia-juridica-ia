@@ -1,0 +1,55 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { PageHeader, EmptyState } from "@/components/ui";
+import { RefreshProcess, RiskForm, ProcessEditForm, FinancialForm } from "@/components/process-detail-actions";
+import { getProcess } from "@/lib/data/processes";
+import { formatCnj } from "@/lib/legal";
+import { requirePermission } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import { addNote, addParty } from "./actions";
+
+const tabs = ["resumo","movimentacoes","prazos","tarefas","documentos","partes","risco","financeiro","notas","historico","ia","auditoria"];
+const labels: Record<string,string> = { resumo:"Resumo",movimentacoes:"Movimentações",prazos:"Prazos",tarefas:"Tarefas",documentos:"Documentos",partes:"Partes",risco:"Risco",financeiro:"Financeiro",notas:"Notas",historico:"Histórico",ia:"IA",auditoria:"Auditoria" };
+const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+
+export default async function ProcessPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; page?: string }> }) {
+  await requirePermission("process.read"); const { id } = await params; const query = await searchParams; const tab = tabs.includes(query.tab ?? "") ? query.tab! : "resumo"; const process = await getProcess(id); if (!process) notFound();
+  const company = process.companies as { trade_name?: string; legal_name?: string } | null; const unit = process.business_units as { name?: string } | null; const category = process.categories as { name?: string } | null; const responsible = process.profiles as { full_name?: string } | null; const firm = process.law_firms as { name?: string } | null;
+  return <><PageHeader title={formatCnj(process.process_number)} description={`${process.judicial_class ?? "Classe não informada"} · ${process.court_name ?? process.court ?? "Tribunal não informado"}`} action={<RefreshProcess id={id} />} />
+    {process.last_sync_error && <p className="card mb-4 border-l-4 border-l-red-600 p-4 text-sm"><strong>Última sincronização falhou.</strong> Dados anteriores foram preservados. Último sucesso: {process.last_synced_at ? new Date(process.last_synced_at).toLocaleString("pt-BR") : "nenhum"}.</p>}
+    <section className="card mb-4 grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4"><Info label="Empresa" value={company?.trade_name ?? company?.legal_name}/><Info label="Unidade" value={unit?.name}/><Info label="Categoria" value={category?.name}/><Info label="Responsável" value={responsible?.full_name}/><Info label="Escritório" value={firm?.name}/><Info label="Status" value={process.status}/><Info label="Risco" value={process.risk_level}/><Info label="Provisão" value={money.format(Number(process.provision ?? 0))}/></section>
+    <nav className="mb-4 flex gap-1 overflow-x-auto border-b border-slate-200" aria-label="Seções do processo">{tabs.map((item) => <Link key={item} href={`?tab=${item}`} className={`whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold ${tab === item ? "border-orange-500 text-orange-700" : "border-transparent text-slate-500"}`}>{labels[item]}</Link>)}</nav>
+    <TabContent tab={tab} process={process} id={id} />
+  </>;
+}
+
+function Info({ label, value }: { label: string; value?: string | null }) { return <div><p className="label">{label}</p><p className="font-bold">{value || "—"}</p></div>; }
+
+async function TabContent({ tab, process, id }: { tab: string; process: Record<string, unknown>; id: string }) {
+  const supabase = await createClient();
+  if (tab === "resumo") return <div className="space-y-4"><ProcessEditForm id={id} initial={{status:String(process.status),notes:process.notes as string|null,monitoring_enabled:Boolean(process.monitoring_enabled),monitoring_frequency:String(process.monitoring_frequency)}}/><section className="card p-5"><p className="text-xs text-slate-500">Processo não encontrado no DataJud pode estar sob segredo de justiça ou indisponível na API pública.</p></section></div>;
+  if (tab === "partes") { const rows = process.process_parties as { role:string; is_client:boolean; parties:{ name:string; type:string; document_masked?:string } }[]; return <div className="space-y-4"><form action={addParty} className="card grid gap-3 p-4 md:grid-cols-4"><input type="hidden" name="process_id" value={id}/><input className="field" name="name" placeholder="Nome da parte" required/><select className="field" name="type"><option value="person">Pessoa</option><option value="company">Empresa</option><option value="government">Órgão público</option><option value="other">Outro</option></select><input className="field" name="role" placeholder="Polo/papel" required/><select className="field" name="is_client"><option value="false">Parte contrária</option><option value="true">Cliente</option></select><button className="button md:col-span-4">Vincular parte</button></form><SimpleTable headers={["Parte","Tipo","Papel","Cliente"]} rows={rows.map((r) => [r.parties.name,r.parties.type,r.role,r.is_client ? "Sim" : "Não"])} /></div>; }
+  if (tab === "risco") { const { data } = await supabase.from("process_risk_history").select("new_level,new_probability,new_impact,reason,created_at,profiles!process_risk_history_changed_by_fkey(full_name)").eq("process_id", id).order("created_at", { ascending: false }).limit(100); return <div className="space-y-4"><RiskForm id={id} current={String(process.risk_level)} /><SimpleTable headers={["Data","Nível","Probabilidade","Impacto","Motivo"]} rows={(data ?? []).map((r) => [new Date(r.created_at).toLocaleString("pt-BR"),r.new_level,r.new_probability ?? "—",money.format(Number(r.new_impact ?? 0)),r.reason])}/></div>; }
+  const resources: Record<string,{ table:string; columns:string; headers:string[]; map:(row:Record<string,unknown>)=>React.ReactNode[] }> = {
+    movimentacoes:{table:"process_movements",columns:"movement_date,movement_type,description,source,ai_summary,ai_relevance",headers:["Data","Tipo","Descrição","Fonte","Análise IA"],map:r=>[new Date(String(r.movement_date)).toLocaleString("pt-BR"),String(r.movement_type??"—"),String(r.description),String(r.source),String(r.ai_summary??"—")]},
+    prazos:{table:"deadlines",columns:"due_at,title,status,priority,origin",headers:["Vencimento","Título","Status","Prioridade","Origem"],map:r=>[new Date(String(r.due_at)).toLocaleString("pt-BR"),String(r.title),String(r.status),String(r.priority),String(r.origin)]},
+    tarefas:{table:"tasks",columns:"due_at,title,status,priority,origin",headers:["Prazo","Título","Status","Prioridade","Origem"],map:r=>[r.due_at?new Date(String(r.due_at)).toLocaleString("pt-BR"):"—",String(r.title),String(r.status),String(r.priority),String(r.origin)]},
+    documentos:{table:"documents",columns:"created_at,name,type,extraction_status,ocr_status",headers:["Data","Nome","Tipo","Extração","OCR"],map:r=>[new Date(String(r.created_at)).toLocaleString("pt-BR"),String(r.name),String(r.type),String(r.extraction_status),String(r.ocr_status)]},
+    notas:{table:"notes",columns:"created_at,content,profiles!notes_author_id_fkey(full_name)",headers:["Data","Nota","Autor"],map:r=>[new Date(String(r.created_at)).toLocaleString("pt-BR"),String(r.content),String((r.profiles as {full_name?:string}|null)?.full_name??"—")]},
+    auditoria:{table:"audit_logs",columns:"created_at,action,resource_type,metadata",headers:["Data","Ação","Recurso","Detalhes"],map:r=>[new Date(String(r.created_at)).toLocaleString("pt-BR"),String(r.action),String(r.resource_type),JSON.stringify(r.metadata)]}
+  };
+  if (tab === "historico") {
+    const [movements, deadlines, tasks, docs, notes] = await Promise.all([supabase.from("process_movements").select("id,movement_date,description").eq("process_id",id),supabase.from("deadlines").select("id,created_at,title").eq("process_id",id),supabase.from("tasks").select("id,created_at,title").eq("process_id",id),supabase.from("documents").select("id,created_at,name").eq("process_id",id),supabase.from("notes").select("id,created_at,content").eq("process_id",id)]);
+    const events = [...(movements.data??[]).map(r=>({at:r.movement_date,type:"Movimentação",text:r.description})),...(deadlines.data??[]).map(r=>({at:r.created_at,type:"Prazo",text:r.title})),...(tasks.data??[]).map(r=>({at:r.created_at,type:"Tarefa",text:r.title})),...(docs.data??[]).map(r=>({at:r.created_at,type:"Documento",text:r.name})),...(notes.data??[]).map(r=>({at:r.created_at,type:"Nota",text:r.content}))].sort((a,b)=>String(b.at).localeCompare(String(a.at))).slice(0,200);
+    return <SimpleTable headers={["Data","Evento","Descrição"]} rows={events.map(e=>[new Date(e.at).toLocaleString("pt-BR"),e.type,e.text])}/>;
+  }
+  if(tab==="financeiro"){const{data}=await supabase.from("process_financial_history").select("created_at,field,previous_value,new_value,reason").eq("process_id",id).order("created_at",{ascending:false}).limit(100);return <div className="space-y-4"><FinancialForm id={id}/><SimpleTable headers={["Data","Campo","Anterior","Novo","Motivo"]} rows={(data??[]).map(r=>[new Date(r.created_at).toLocaleString("pt-BR"),r.field,money.format(Number(r.previous_value??0)),money.format(Number(r.new_value??0)),r.reason])}/></div>}
+  if(tab==="notas"){const{data}=await supabase.from("notes").select("id,created_at,content,profiles!notes_author_id_fkey(full_name)").eq("process_id",id).is("deleted_at",null).order("created_at",{ascending:false});return <div className="space-y-4"><form action={addNote} className="card p-4"><input type="hidden" name="process_id" value={id}/><textarea className="field min-h-28" name="content" placeholder="Nota interna. Menção: @[UUID do usuário]" required/><button className="button mt-3">Adicionar nota</button></form><SimpleTable headers={["Data","Nota","Autor"]} rows={(data??[]).map(r=>[new Date(r.created_at).toLocaleString("pt-BR"),r.content,(r.profiles as unknown as{full_name?:string}|null)?.full_name??"—"])}/></div>}
+  if (tab === "ia") return <section className="card p-5"><h2 className="font-black">Pergunte sobre este processo</h2><Link className="button mt-4" href={`/chat?process_id=${id}`}>Abrir conversa contextual</Link></section>;
+  const resource = resources[tab]; if (!resource) return null;
+  let query = supabase.from(resource.table).select(resource.columns).order(tab === "movimentacoes" ? "movement_date" : "created_at", { ascending: false }).limit(100);
+  if (tab === "auditoria") query = query.eq("resource_id", id); else query = query.eq("process_id", id);
+  const { data } = await query; return <SimpleTable headers={resource.headers} rows={(data as unknown as Record<string,unknown>[] ?? []).map(resource.map)} />;
+}
+
+function SimpleTable({ headers, rows }: { headers: string[]; rows: React.ReactNode[][] }) { return <section className="card table-wrap">{rows.length === 0 ? <EmptyState>Nenhum registro.</EmptyState> : <table><thead><tr>{headers.map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{rows.map((row,i)=><tr key={i}>{row.map((cell,j)=><td key={j}>{cell}</td>)}</tr>)}</tbody></table>}</section>; }
