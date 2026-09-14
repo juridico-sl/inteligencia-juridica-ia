@@ -44,7 +44,10 @@ export async function fetchCnpjFromBrasilApi(rawCnpj: string): Promise<{
 
   try {
     const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleanCnpj}`, {
-      headers: { Accept: "application/json" },
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) CentralJuridica/1.0",
+      },
       next: { revalidate: 86400 }, // cache 24h
     });
 

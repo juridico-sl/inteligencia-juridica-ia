@@ -67,7 +67,10 @@ export async function calculateBcbCorrection({
   try {
     const url = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${serie}/dados?formato=json&dataInicial=${dataInicial}&dataFinal=${dataFinal}`;
     const res = await fetch(url, {
-      headers: { Accept: "application/json" },
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) CentralJuridica/1.0",
+      },
       next: { revalidate: 43200 }, // cache 12h no Next.js
     });
 
