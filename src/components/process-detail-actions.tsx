@@ -4,9 +4,63 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 export function RefreshProcess({ id }: { id: string }) {
-  const [message, setMessage] = useState(""); const [busy, setBusy] = useState(false); const router = useRouter();
-  async function refresh() { setBusy(true); const response = await fetch(`/api/v1/processes/${id}/refresh`, { method: "POST" }); const result = await response.json(); setBusy(false); setMessage(response.ok ? (result.queued ? "Sincronização agendada." : "Sincronização já agendada.") : result.error); router.refresh(); }
-  return <div><button className="button" onClick={refresh} disabled={busy}>{busy ? "Agendando…" : "Atualizar DataJud"}</button>{message && <p className="mt-2 text-xs font-semibold" role="status">{message}</p>}</div>;
+  const [message, setMessage] = useState("");
+  const [isSuccess, setIsSuccess] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const router = useRouter();
+
+  async function refresh() {
+    setBusy(true);
+    setMessage("");
+    try {
+      const response = await fetch(`/api/v1/processes/${id}/refresh`, { method: "POST" });
+      const result = await response.json();
+      setBusy(false);
+      if (response.ok && result.ok) {
+        setIsSuccess(true);
+        setMessage(result.message || "Sincronizado com sucesso!");
+        router.refresh();
+      } else {
+        setIsSuccess(false);
+        setMessage(result.error || "Falha na sincronização");
+      }
+    } catch {
+      setBusy(false);
+      setIsSuccess(false);
+      setMessage("Erro ao comunicar com o servidor.");
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-end">
+      <button
+        className="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-500 disabled:opacity-60 transition"
+        onClick={refresh}
+        disabled={busy}
+      >
+        {busy ? (
+          <>
+            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            <span>Consultando DataJud…</span>
+          </>
+        ) : (
+          <>
+            <span>⚡ Sincronizar DataJud</span>
+          </>
+        )}
+      </button>
+      {message && (
+        <p
+          className={`mt-2 text-xs font-semibold ${
+            isSuccess ? "text-emerald-700" : "text-red-600"
+          }`}
+          role="status"
+        >
+          {message}
+        </p>
+      )}
+    </div>
+  );
 }
 
 export function RiskForm({ id, current }: { id: string; current: string }) {
