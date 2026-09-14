@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { PageHeader, EmptyState } from "@/components/ui";
 import { RefreshProcess, RiskForm, ProcessEditForm, FinancialForm } from "@/components/process-detail-actions";
+import { PartyAddForm } from "@/components/party-add-form";
+import { calculateBcbCorrection } from "@/lib/integrations/bcb";
 import { getProcess } from "@/lib/data/processes";
 import { formatCnj } from "@/lib/legal";
 import { requirePermission } from "@/lib/auth";
@@ -361,27 +363,7 @@ async function TabVisaoGeral({
             )}
           </div>
 
-          <form action={addParty} className="mt-4 pt-3 border-t border-slate-100 grid gap-2 sm:grid-cols-2">
-            <input type="hidden" name="process_id" value={id} />
-            <input
-              className="field sm:col-span-2 text-sm"
-              name="name"
-              placeholder="Nome da parte / empresa"
-              required
-            />
-            <input className="field text-sm" name="role" placeholder="Papel (Autor, Réu...)" required />
-            <select className="field text-sm" name="type">
-              <option value="company">Empresa (PJ)</option>
-              <option value="person">Pessoa Física (PF)</option>
-              <option value="government">Órgão Público</option>
-              <option value="other">Outro</option>
-            </select>
-            <select className="field text-sm" name="is_client">
-              <option value="false">Parte Contrária</option>
-              <option value="true">Cliente da Empresa</option>
-            </select>
-            <button className="button text-sm">Vincular Parte</button>
-          </form>
+          <PartyAddForm processId={id} action={addParty} />
         </section>
 
         {/* Bloco de Gestão Interna & Monitoramento */}
@@ -766,6 +748,17 @@ async function TabFinanceiro({
   const riskHistory = riskHistoryRes.data || [];
   const finHistory = finHistoryRes.data || [];
 
+  const filingDate = process.filing_date ? String(process.filing_date) : null;
+  const claimVal = Number(process.claim_value ?? 0);
+  let bcbCorrection = null;
+  if (claimVal > 0 && filingDate) {
+    bcbCorrection = await calculateBcbCorrection({
+      value: claimVal,
+      startDate: filingDate,
+      serie: 433,
+    });
+  }
+
   return (
     <div className="space-y-6">
       {/* Alerta de Precisão Contábil */}
@@ -777,12 +770,21 @@ async function TabFinanceiro({
         </div>
       </div>
 
-      {/* Cards de Métricas Financeiras */}
+      {/* Cards de Métricas Financeiras com Correção BACEN */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
-          label="Valor da Causa"
-          value={money.format(Number(process.claim_value ?? 0))}
-          sub="Atribuído na petição inicial"
+          label="Valor da Causa (DataJud)"
+          value={money.format(claimVal)}
+          sub={filingDate ? `Distribuído em ${new Date(filingDate).toLocaleDateString("pt-BR")}` : "Atribuído na petição inicial"}
+        />
+        <MetricCard
+          label="Valor Corrigido (BACEN IPCA)"
+          value={bcbCorrection ? money.format(bcbCorrection.correctedValue) : money.format(claimVal)}
+          sub={
+            bcbCorrection && bcbCorrection.factor > 1
+              ? `Fator oficial BACEN: +${((bcbCorrection.factor - 1) * 100).toFixed(1)}%`
+              : "Sem necessidade de correção"
+          }
         />
         <MetricCard
           label="Exposição Estimada"
@@ -794,12 +796,24 @@ async function TabFinanceiro({
           value={money.format(Number(process.provision ?? 0))}
           sub={`Classificação: ${String(process.risk_level ?? "Não classificado")}`}
         />
-        <MetricCard
-          label="Acordo / Condenação"
-          value={money.format(Number(process.settlement_value ?? 0))}
-          sub={`Pago: ${money.format(Number(process.paid_value ?? 0))}`}
-        />
       </div>
+
+      {bcbCorrection && bcbCorrection.factor > 1 && (
+        <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-3.5 text-xs text-blue-950 flex items-center justify-between gap-3 shadow-sm">
+          <div className="space-y-0.5">
+            <strong className="font-bold flex items-center gap-1.5 text-blue-900">
+              <Landmark className="w-4 h-4 text-blue-700" />
+              <span>Cálculo Automático via API Oficial do Banco Central do Brasil (SGS Série 433):</span>
+            </strong>
+            <p className="text-blue-800">
+              O valor original de {money.format(claimVal)} do ajuizamento foi atualizado automaticamente pela variação acumulada do IPCA oficial, totalizando {money.format(bcbCorrection.correctedValue)}. Zero necessidade de planilhas manuais.
+            </p>
+          </div>
+          <span className="rounded bg-blue-100 text-blue-900 border border-blue-300 font-bold px-2 py-0.5 text-[11px] whitespace-nowrap">
+            Oficial BACEN
+          </span>
+        </div>
+      )}
 
       {/* Formulários e Histórico de Risco e Financeiro */}
       <div className="grid gap-6 lg:grid-cols-2">
