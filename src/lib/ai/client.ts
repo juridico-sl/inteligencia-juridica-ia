@@ -6,7 +6,7 @@ export type AiMessage = { role: "system" | "user" | "assistant" | "tool"; conten
 export type AiTool = { type: "function"; function: { name: string; description: string; parameters: Record<string, unknown> } };
 
 export class MimoClient {
-  private baseUrl = process.env.MIMO_BASE_URL ?? "https://api.xiaomimimo.com/v1";
+  private baseUrl = process.env.MIMO_BASE_URL ?? "https://token-plan-sgp.xiaomimimo.com/v1";
   private model: string;
   private key = requiredServerEnv("MIMO_API_KEY");
   private temperature: number;

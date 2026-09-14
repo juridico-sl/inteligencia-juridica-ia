@@ -118,7 +118,7 @@ export default async function ProcessPage({
             className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition"
           >
             <Bot className="w-4 h-4 text-slate-500" />
-            <span>Conversar com IA</span>
+            <span>Consultar LucIA</span>
           </Link>
           <RefreshProcess id={id} />
         </div>

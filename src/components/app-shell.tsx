@@ -38,7 +38,7 @@ const navSections: NavSection[] = [
       { label: "Andamentos DataJud", href: "/movimentacoes", icon: Activity },
       { label: "Prazos & Tarefas", href: "/prazos", icon: Clock },
       { label: "Documentos", href: "/documentos", icon: FolderOpen },
-      { label: "Assistente IA", href: "/chat", icon: Bot },
+      { label: "LucIA do Jurídico", href: "/chat", icon: Bot },
     ],
   },
   {
