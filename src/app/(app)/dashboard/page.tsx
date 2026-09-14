@@ -1,29 +1,206 @@
 import type { Metadata } from "next";
-import { KpiCard, PageHeader } from "@/components/ui";
+import Link from "next/link";
+import { KpiCard, PageHeader, TrafficLight } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardCharts } from "@/components/dashboard-charts";
 import { getProcessOptions } from "@/lib/data/processes";
 
-export const metadata: Metadata = { title: "Visão Geral" };
+export const metadata: Metadata = { title: "Visão Geral · Central Jurídica" };
 const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
-export default async function DashboardPage({searchParams}:{searchParams:Promise<{company?:string;category?:string;risk?:"low"|"medium"|"high"|"critical";start?:string;end?:string}>}) {
-  const filters=await searchParams;const supabase=await createClient();
-  const [{data:report},options] = await Promise.all([supabase.rpc("dashboard_metrics",{filter_company_id:filters.company||null,filter_category_id:filters.category||null,filter_risk:filters.risk||null,filter_start_date:filters.start||null,filter_end_date:filters.end||null}),getProcessOptions()]);
-  const metrics = report ? {active:Number(report.active),unassigned:Number(report.unassigned),deadlines:Number(report.deadlines),overdue:Number(report.overdue),tasks:Number(report.tasks),movements:Number(report.movements),claim:Number(report.claim_value),exposure:Number(report.exposure),provision:Number(report.provision)} : {active:0,unassigned:0,deadlines:0,overdue:0,tasks:0,movements:0,claim:0,exposure:0,provision:0};
-  return <>
-    <PageHeader title="Visão Geral" description="Indicadores consolidados em tempo real." />
-    <form className="card mb-4 grid gap-3 p-4 md:grid-cols-3 xl:grid-cols-6"><select className="field" name="company" defaultValue={filters.company}><option value="">Todas empresas</option>{options.companies.map(c=><option key={c.id} value={c.id}>{c.trade_name??c.legal_name}</option>)}</select><select className="field" name="category" defaultValue={filters.category}><option value="">Todas categorias</option>{options.categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select><select className="field" name="risk" defaultValue={filters.risk}><option value="">Todos riscos</option><option value="low">Baixo</option><option value="medium">Médio</option><option value="high">Alto</option><option value="critical">Crítico</option></select><input className="field" type="date" name="start" defaultValue={filters.start}/><input className="field" type="date" name="end" defaultValue={filters.end}/><button className="button">Aplicar</button></form>
-    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Indicadores">
-      <KpiCard label="Processos ativos" value={metrics.active} />
-      <KpiCard label="Sem responsável" value={metrics.unassigned} tone={metrics.unassigned ? "danger" : "neutral"} />
-      <KpiCard label="Prazos próximos" value={metrics.deadlines} />
-      <KpiCard label="Prazos vencidos" value={metrics.overdue} tone={metrics.overdue ? "danger" : "neutral"} />
-      <KpiCard label="Tarefas pendentes" value={metrics.tasks} />
-      <KpiCard label="Movimentações em 24h" value={metrics.movements} />
-      <KpiCard label="Exposição estimada" value={money.format(metrics.exposure)} />
-      <KpiCard label="Provisão" value={money.format(metrics.provision)} tone="neutral" />
-    </section>
-    {report&&<DashboardCharts risk={report.by_risk as {label:string;value:number}[]} category={report.by_category as {label:string;value:number}[]} monthly={report.by_month as {label:string;value:number}[]}/>} 
-  </>;
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    company?: string;
+    category?: string;
+    risk?: "low" | "medium" | "high" | "critical";
+    start?: string;
+    end?: string;
+  }>;
+}) {
+  const filters = await searchParams;
+  const supabase = await createClient();
+
+  const [{ data: report }, options] = await Promise.all([
+    supabase.rpc("dashboard_metrics", {
+      filter_company_id: filters.company || null,
+      filter_category_id: filters.category || null,
+      filter_risk: filters.risk || null,
+      filter_start_date: filters.start || null,
+      filter_end_date: filters.end || null,
+    }),
+    getProcessOptions(),
+  ]);
+
+  const metrics = report
+    ? {
+        active: Number(report.active),
+        unassigned: Number(report.unassigned),
+        deadlines: Number(report.deadlines),
+        overdue: Number(report.overdue),
+        tasks: Number(report.tasks),
+        movements: Number(report.movements),
+        claim: Number(report.claim_value),
+        exposure: Number(report.exposure),
+        provision: Number(report.provision),
+      }
+    : {
+        active: 0,
+        unassigned: 0,
+        deadlines: 0,
+        overdue: 0,
+        tasks: 0,
+        movements: 0,
+        claim: 0,
+        exposure: 0,
+        provision: 0,
+      };
+
+  return (
+    <>
+      <PageHeader
+        title="Painel Geral"
+        description="Monitoramento executivo e indicadores consolidados da carteira jurídica."
+        action={
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-700">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              Sincronismo Ativo
+            </span>
+            <Link href="/processos?novo=1" className="button text-sm">
+              + Novo Processo
+            </Link>
+          </div>
+        }
+      />
+
+      {/* Barra de Filtros Elegante */}
+      <form className="card mb-6 grid gap-3 p-4 md:grid-cols-3 xl:grid-cols-6 items-end bg-white">
+        <div>
+          <label className="label">Empresa</label>
+          <select className="field text-sm" name="company" defaultValue={filters.company}>
+            <option value="">Todas empresas</option>
+            {options.companies.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.trade_name ?? c.legal_name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="label">Categoria</label>
+          <select className="field text-sm" name="category" defaultValue={filters.category}>
+            <option value="">Todas categorias</option>
+            {options.categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="label">Risco</label>
+          <select className="field text-sm" name="risk" defaultValue={filters.risk}>
+            <option value="">Todos riscos</option>
+            <option value="low">Baixo (Remoto)</option>
+            <option value="medium">Médio (Possível)</option>
+            <option value="high">Alto (Provável)</option>
+            <option value="critical">Crítico</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="label">Período De</label>
+          <input className="field text-sm" type="date" name="start" defaultValue={filters.start} />
+        </div>
+
+        <div>
+          <label className="label">Período Até</label>
+          <input className="field text-sm" type="date" name="end" defaultValue={filters.end} />
+        </div>
+
+        <div className="flex gap-2">
+          <button className="button flex-1 text-sm">Filtrar</button>
+          <Link href="/dashboard" className="button button-secondary text-sm">
+            Limpar
+          </Link>
+        </div>
+      </form>
+
+      {/* Grid de KPIs - Seção 3.1 & 5 de IDENTIDADE_VISUAL.md */}
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-6" aria-label="Indicadores">
+        <KpiCard
+          label="Processos Ativos"
+          value={metrics.active}
+          tone="brand"
+          subtitle="Em tramitação no Judiciário"
+          icon={<span>⚖️</span>}
+        />
+        <KpiCard
+          label="Exposição Estimada"
+          value={money.format(metrics.exposure)}
+          tone="danger"
+          subtitle="Risco financeiro potencial"
+          icon={<span>📉</span>}
+        />
+        <KpiCard
+          label="Provisão Contábil"
+          value={money.format(metrics.provision)}
+          tone="neutral"
+          subtitle="Conforme norma CPC 25"
+          icon={<span>🏦</span>}
+        />
+        <KpiCard
+          label="Prazos Fatais Iminentes"
+          value={metrics.deadlines}
+          tone={metrics.overdue > 0 ? "danger" : metrics.deadlines > 0 ? "warning" : "success"}
+          subtitle={`${metrics.overdue} vencidos pendentes`}
+          icon={<span>⏰</span>}
+        />
+      </section>
+
+      {/* Semáforo de Risco & Oportunidade - Seção 3.2 de IDENTIDADE_VISUAL.md */}
+      <section className="mb-6">
+        <div className="mb-3">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">
+            Semáforo de Risco & Operação
+          </h2>
+        </div>
+        <TrafficLight
+          items={[
+            {
+              track: "Prazos Vencidos",
+              value: metrics.overdue === 0 ? "0 Prazos" : `${metrics.overdue} Vencidos`,
+              status: metrics.overdue > 0 ? "danger" : "success",
+              detail: metrics.overdue > 0 ? "Ação imediata necessária" : "Todos os prazos em dia",
+            },
+            {
+              track: "Processos sem Responsável",
+              value: metrics.unassigned === 0 ? "100% Atribuídos" : `${metrics.unassigned} Pendentes`,
+              status: metrics.unassigned > 0 ? "warning" : "success",
+              detail: metrics.unassigned > 0 ? "Atribuir advogados" : "Equipe alocada",
+            },
+            {
+              track: "Andamentos Recentes",
+              value: `${metrics.movements} Movimentações`,
+              status: "success",
+              detail: "Monitoramento DataJud nas últimas 24h",
+            },
+          ]}
+        />
+      </section>
+
+      {/* Gráficos Institucionais */}
+      {report && (
+        <DashboardCharts
+          risk={(report.by_risk as { label: string; value: number }[]) || []}
+          category={(report.by_category as { label: string; value: number }[]) || []}
+          monthly={(report.by_month as { label: string; value: number }[]) || []}
+        />
+      )}
+    </>
+  );
 }

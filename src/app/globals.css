@@ -1,36 +1,202 @@
 @import "tailwindcss";
 
 :root {
-  --brand: #f97316;
-  --danger: #dc2626;
-  --ink: #1e293b;
-  --muted: #64748b;
-  --line: #e2e8f0;
-  --surface: #ffffff;
-  --background: #f8fafc;
+  --brand: #F97316;       /* Laranja Santa Lúcia */
+  --brand-hover: #EA580C;
+  --brand-light: #FFF7ED;
+  --danger: #DC2626;      /* Vermelho Corporativo */
+  --danger-light: #FEF2F2;
+  --success: #10B981;     /* Verde Positivo */
+  --success-light: #ECFDF5;
+  --warning: #F59E0B;     /* Âmbar Atenção */
+  --warning-light: #FFFBEB;
+  --ink: #1E293B;         /* Slate Dark (Texto principal) */
+  --muted: #64748B;       /* Slate Gray (Texto secundário) */
+  --line: #E2E8F0;        /* Slate Light Border */
+  --surface: #FFFFFF;     /* Fundo de cards */
+  --background: #F8FAFC;  /* Fundo da aplicação */
 }
 
-* { box-sizing: border-box; }
-body { margin: 0; background: var(--background); color: var(--ink); font-family: Inter, system-ui, -apple-system, sans-serif; }
-a { color: inherit; text-decoration: none; }
-button, input, select, textarea { font: inherit; }
-button { cursor: pointer; }
-:focus-visible { outline: 3px solid color-mix(in srgb, var(--brand) 55%, transparent); outline-offset: 2px; }
+* {
+  box-sizing: border-box;
+}
 
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 1px 2px rgb(15 23 42 / .05); }
-.field { width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: .65rem .75rem; background: white; }
-.label { display: block; margin-bottom: .35rem; color: var(--muted); font-size: .75rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
-.button { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; gap: .5rem; border: 0; border-radius: 8px; padding: .55rem .9rem; background: var(--brand); color: white; font-weight: 700; }
-.button:hover { background: #ea580c; }
-.button-secondary { background: white; border: 1px solid var(--line); color: var(--ink); }
-.button-danger { background: var(--danger); }
-.table-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; }
-th { background: #f8fafc; color: var(--muted); font-size: .75rem; letter-spacing: .04em; text-align: left; text-transform: uppercase; }
-th, td { border-bottom: 1px solid var(--line); padding: .75rem; vertical-align: top; }
-tbody tr:hover { background: #f8fafc; }
-.badge { display: inline-flex; border-radius: 999px; padding: .2rem .55rem; background: #f1f5f9; font-size: .75rem; font-weight: 700; }
-.badge-urgent { background: #fee2e2; color: #991b1b; }
-.badge-warning { background: #fef3c7; color: #92400e; }
-.badge-success { background: #d1fae5; color: #065f46; }
-.empty { padding: 3rem 1rem; text-align: center; color: var(--muted); }
+body {
+  margin: 0;
+  background-color: var(--background);
+  color: var(--ink);
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button, input, select, textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* Card Pattern: Fundo branco, cantos arredondados (12px), borda slate-200, sombra leve */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px 0 rgb(15 23 42 / 0.05);
+}
+
+/* Formulários */
+.field {
+  width: 100%;
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  padding: 0.625rem 0.875rem;
+  background-color: #FFFFFF;
+  color: var(--ink);
+  font-size: 0.875rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.field:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
+}
+
+.label {
+  display: block;
+  margin-bottom: 0.375rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Botões Institucionais */
+.button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 0;
+  border-radius: 8px;
+  padding: 0.55rem 1rem;
+  background-color: var(--brand);
+  color: #FFFFFF;
+  font-size: 0.875rem;
+  font-weight: 700;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.button:hover {
+  background-color: var(--brand-hover);
+}
+
+.button-secondary {
+  background-color: #FFFFFF;
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.button-secondary:hover {
+  background-color: #F1F5F9;
+  border-color: #CBD5E1;
+}
+
+.button-danger {
+  background-color: var(--danger);
+  color: #FFFFFF;
+}
+
+.button-danger:hover {
+  background-color: #B91C1C;
+}
+
+/* Tabelas de Dados */
+.table-wrap {
+  overflow-x: auto;
+  border-radius: 12px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  background-color: #F8FAFC;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-align: left;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--line);
+  padding: 0.75rem 1rem;
+}
+
+td {
+  border-bottom: 1px solid var(--line);
+  padding: 0.875rem 1rem;
+  vertical-align: middle;
+  font-size: 0.875rem;
+}
+
+tbody tr:hover {
+  background-color: rgba(248, 250, 252, 0.8);
+}
+
+/* Badges / Chips em Formato de Pílula */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.2rem 0.65rem;
+  background-color: #F1F5F9;
+  color: var(--ink);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.badge-brand {
+  background-color: var(--brand-light);
+  color: #C2410C;
+  border: 1px solid #FFEDD5;
+}
+
+.badge-urgent, .badge-danger {
+  background-color: var(--danger-light);
+  color: #991B1B;
+  border: 1px solid #FEE2E2;
+}
+
+.badge-warning {
+  background-color: var(--warning-light);
+  color: #92400E;
+  border: 1px solid #FEF3C7;
+}
+
+.badge-success {
+  background-color: var(--success-light);
+  color: #065F46;
+  border: 1px solid #D1FAE5;
+}
+
+.empty {
+  padding: 3.5rem 1rem;
+  text-align: center;
+  color: var(--muted);
+}
