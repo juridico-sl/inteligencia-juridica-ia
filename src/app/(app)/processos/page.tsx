@@ -234,10 +234,10 @@ export default async function ProcessesPage({ searchParams }: { searchParams: Pr
                     <td>
                       <span
                         className={`inline-flex items-center gap-1 text-[11px] font-bold rounded-full px-2 py-0.5 ${
-                          item.last_synced_at ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"
+                          item.last_synced_at ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-600 border border-slate-200"
                         }`}
                       >
-                        {item.last_synced_at ? "✓ DataJud" : "Pendente"}
+                        {item.last_synced_at ? "DataJud Ativo" : "Pendente"}
                       </span>
                     </td>
                   </tr>

@@ -1,5 +1,13 @@
 import "server-only";
 
+export type NaturezaAto =
+  | "decisao"       // Decisões, sentenças, despachos com conteúdo decisório (requer PDF)
+  | "intimacao"     // Intimações, citações, notificações DJE/portal
+  | "bloqueio"      // Sisbajud, Renajud, penhora, bloqueio judicial
+  | "conclusao"     // Conclusão para juiz ou relator
+  | "peticao"       // Juntada de petições ou documentos pelas partes
+  | "tramitacao";   // Redistribuição, arquivamento, juntadas ordinatórias
+
 export interface DataJudMovement {
   codigo?: number | string;
   nome: string;
@@ -7,6 +15,8 @@ export interface DataJudMovement {
   descricao?: string;
   complementos?: string[];
   orgaoJulgador?: string;
+  naturezaAto: NaturezaAto;
+  requerDocumentoPdf: boolean; // Indica honestamente que o teor depende do PDF dos autos
 }
 
 export interface DataJudParty {
@@ -24,12 +34,14 @@ export interface DataJudProcessResult {
   classeCodigo?: number;
   orgaoJulgador?: string;
   dataAjuizamento?: string;
+  valorCausa?: number;
   sistema?: string;
   formato?: string;
   nivelSigilo?: number;
   assuntos?: string[];
   movimentacoes: DataJudMovement[];
   partes?: DataJudParty[];
+  partesOmitidasPeloTribunal: boolean;
   rawSource?: Record<string, unknown>;
   error?: string;
 }
@@ -42,6 +54,44 @@ const TJ_MAP: Record<string, string> = {
   "21": "tjrs", "22": "tjro", "23": "tjrr", "24": "tjsc", "25": "tjse",
   "26": "tjsp", "27": "tjto",
 };
+
+// Classificador estrito de códigos TPU do CNJ
+function classificarMovimentoTPU(
+  codigoRaw?: number | string,
+  nomeRaw?: string
+): { naturezaAto: NaturezaAto; requerDocumentoPdf: boolean } {
+  const codigo = Number(codigoRaw);
+  const nome = (nomeRaw || "").toLowerCase();
+
+  // 1. Bloqueios Judiciais / Constrições (Máxima Urgência)
+  if ([864, 888, 11786, 11787, 11788].includes(codigo) || /\b(penhora|sisbajud|bacenjud|renajud|bloqueio)\b/i.test(nome)) {
+    return { naturezaAto: "bloqueio", requerDocumentoPdf: true };
+  }
+
+  // 2. Decisões, Sentenças e Tutelas de Urgência
+  // Códigos TPU: 3 (Decisão), 193 (Sentença), 219 (Extinção), 332 (Antecipação de Tutela), 442 (Liminar)
+  if ([3, 193, 219, 237, 332, 442, 11010, 11011, 11012, 11013, 11014].includes(codigo) || /\b(senten[cç]a|decis[aã]o|tutela|liminar|ac[oó]rd[aã]o)\b/i.test(nome)) {
+    return { naturezaAto: "decisao", requerDocumentoPdf: true };
+  }
+
+  // 3. Intimações, Citações e DJE (Gatilhos de Prazo Processual)
+  // Códigos TPU: 60 (Citação), 92 (Publicação), 1061 (DJE), 12282, 12287, 12288
+  if ([60, 92, 1061, 12282, 12287, 12288].includes(codigo) || /\b(intima[cç][aã]o|cita[cç][aã]o|publica[cç][aã]o|di[aá]rio)\b/i.test(nome)) {
+    return { naturezaAto: "intimacao", requerDocumentoPdf: false };
+  }
+
+  // 4. Conclusão ao Magistrado
+  if (codigo === 51 || /\bconclus[aã]o\b/i.test(nome)) {
+    return { naturezaAto: "conclusao", requerDocumentoPdf: false };
+  }
+
+  // 5. Petições e Manifestações
+  if ([85, 581].includes(codigo) || /\b(peti[cç][aã]o|juntada)\b/i.test(nome)) {
+    return { naturezaAto: "peticao", requerDocumentoPdf: false };
+  }
+
+  return { naturezaAto: "tramitacao", requerDocumentoPdf: false };
+}
 
 export function getTribunalAliasFromCnj(cnj: string): string | null {
   const clean = cnj.replace(/\D/g, "");
@@ -78,6 +128,7 @@ export async function fetchProcessFromDatajud(
       processNumber: rawCnj,
       tribunal: "",
       movimentacoes: [],
+      partesOmitidasPeloTribunal: true,
       error: "Não foi possível identificar o tribunal a partir do número CNJ informado.",
     };
   }
@@ -89,6 +140,7 @@ export async function fetchProcessFromDatajud(
       processNumber: rawCnj,
       tribunal,
       movimentacoes: [],
+      partesOmitidasPeloTribunal: true,
       error: "Chave DATAJUD_API_KEY não configurada no ambiente.",
     };
   }
@@ -125,6 +177,7 @@ export async function fetchProcessFromDatajud(
         processNumber: rawCnj,
         tribunal,
         movimentacoes: [],
+        partesOmitidasPeloTribunal: true,
         error: `DataJud retornou status ${response.status} (${errorText.slice(0, 100)})`,
       };
     }
@@ -138,6 +191,7 @@ export async function fetchProcessFromDatajud(
         processNumber: rawCnj,
         tribunal,
         movimentacoes: [],
+        partesOmitidasPeloTribunal: true,
         error: "Processo não localizado na API pública do DataJud (pode estar em segredo de justiça ou não indexado).",
       };
     }
@@ -152,12 +206,19 @@ export async function fetchProcessFromDatajud(
             .filter(Boolean)
         : [];
 
+      const { naturezaAto, requerDocumentoPdf } = classificarMovimentoTPU(
+        m.codigo as number | string,
+        m.nome as string
+      );
+
       return {
         codigo: (m.codigo as number | string) ?? undefined,
         nome: (m.nome as string) || "Movimentação",
         dataHora: (m.dataHora as string) || new Date().toISOString(),
         complementos: comps.length > 0 ? comps : undefined,
         orgaoJulgador: (m.orgaoJulgador as { nome?: string })?.nome,
+        naturezaAto,
+        requerDocumentoPdf,
       };
     });
 
@@ -175,12 +236,19 @@ export async function fetchProcessFromDatajud(
     if (source.dataAjuizamento) {
       const rawDate = String(source.dataAjuizamento);
       if (rawDate.length === 14) {
-        // Formato YYYYMMDDHHmmss
         filingDate = `${rawDate.slice(0, 4)}-${rawDate.slice(4, 6)}-${rawDate.slice(6, 8)}T${rawDate.slice(8, 10)}:${rawDate.slice(10, 12)}:${rawDate.slice(12, 14)}Z`;
       } else {
         filingDate = rawDate;
       }
     }
+
+    // Extração rigorosa de valor da causa se fornecido pelo tribunal
+    const rawValor = source.dadosBasicos?.valorCausa || source.valorCausa;
+    const valorCausa = rawValor && !isNaN(Number(rawValor)) ? Number(rawValor) : undefined;
+
+    // Verificação honesta de partes
+    const partesDisponiveis = Array.isArray(source.partes) && source.partes.length > 0;
+    const partesOmitidasPeloTribunal = !partesDisponiveis;
 
     return {
       found: true,
@@ -191,11 +259,13 @@ export async function fetchProcessFromDatajud(
       classeCodigo: source.classe?.codigo,
       orgaoJulgador: source.orgaoJulgador?.nome,
       dataAjuizamento: filingDate,
+      valorCausa,
       sistema: source.sistema?.nome,
       formato: source.formato?.nome,
       nivelSigilo: source.nivelSigilo,
       assuntos,
       movimentacoes,
+      partesOmitidasPeloTribunal,
       rawSource: source,
     };
   } catch (err: unknown) {
@@ -205,6 +275,7 @@ export async function fetchProcessFromDatajud(
       processNumber: rawCnj,
       tribunal,
       movimentacoes: [],
+      partesOmitidasPeloTribunal: true,
       error: `Falha ao conectar na API DataJud: ${message}`,
     };
   }

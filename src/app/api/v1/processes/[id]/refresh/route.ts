@@ -17,7 +17,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // 1. Busca dados do processo local
     const { data: process, error: fetchError } = await admin
       .from("processes")
-      .select("id,process_number,court,metadata")
+      .select("id,process_number,court,metadata,claim_value")
       .eq("id", id)
       .is("deleted_at", null)
       .single();
@@ -60,6 +60,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       sistema: djResult.sistema,
       formato: djResult.formato,
       nivel_sigilo: djResult.nivelSigilo,
+      partes_omitidas_tribunal: djResult.partesOmitidasPeloTribunal,
       source: "DataJud",
     };
 
@@ -74,6 +75,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (djResult.classeNome) updatePayload.judicial_class = djResult.classeNome;
     if (djResult.orgaoJulgador) updatePayload.judging_body = djResult.orgaoJulgador;
     if (djResult.dataAjuizamento) updatePayload.filing_date = djResult.dataAjuizamento;
+
+    // Se o tribunal fornecer valor da causa oficial e estiver zerado/nulo localmente, preenche
+    if (djResult.valorCausa && !process.claim_value) {
+      updatePayload.claim_value = djResult.valorCausa;
+    }
 
     await admin.from("processes").update(updatePayload).eq("id", id);
 
@@ -98,7 +104,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           description: fullDesc,
           movement_date: dateIso,
           source: "DataJud",
-          raw_data: m as unknown as Record<string, unknown>,
+          raw_data: {
+            ...m,
+            natureza_ato: m.naturezaAto,
+            requer_documento_pdf: m.requerDocumentoPdf,
+          },
           content_hash: hash,
         };
       });

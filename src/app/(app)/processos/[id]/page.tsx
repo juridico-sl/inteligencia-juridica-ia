@@ -87,10 +87,14 @@ export default async function ProcessPage({
             <span className="rounded bg-slate-900 px-2.5 py-0.5 text-xs font-bold text-white uppercase tracking-wider">
               {process.court_name ?? process.court ?? "Tribunal"}
             </span>
-            {process.last_synced_at && (
-              <span className="rounded bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800 flex items-center gap-1">
+            {process.last_synced_at ? (
+              <span className="rounded bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-xs font-bold text-emerald-800 flex items-center gap-1">
                 <Check className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Sincronizado com DataJud</span>
+                <span>Base Oficial CNJ (Sincronizado {new Date(process.last_synced_at).toLocaleDateString("pt-BR")})</span>
+              </span>
+            ) : (
+              <span className="rounded bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
+                Sincronismo pendente
               </span>
             )}
             <span className="rounded bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-700 capitalize">
@@ -122,11 +126,11 @@ export default async function ProcessPage({
         <div className="card mb-4 border-l-4 border-l-amber-500 bg-amber-50/50 p-4 text-sm text-amber-900 flex items-start gap-3">
           <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
           <div>
-            <p className="font-bold">Aviso de sincronização do DataJud:</p>
+            <p className="font-bold">Aviso de Limitação da API Pública do CNJ:</p>
             <p className="mt-0.5 text-xs">{process.last_sync_error}</p>
             <p className="mt-1 text-[11px] text-amber-700">
-              Dados anteriores preservados. Último sucesso:{" "}
-              {process.last_synced_at ? new Date(process.last_synced_at).toLocaleString("pt-BR") : "nenhum"}.
+              Processos em segredo de justiça ou distribuídos recentemente podem não estar indexados na API pública.
+              Dados anteriores preservados.
             </p>
           </div>
         </div>
@@ -230,8 +234,8 @@ async function TabVisaoGeral({
               Dados Oficiais do Poder Judiciário (DataJud)
             </h2>
           </div>
-          <span className="rounded bg-blue-100 px-2.5 py-0.5 text-[11px] font-bold text-blue-800">
-            Fonte: Base Pública CNJ
+          <span className="rounded bg-blue-50 border border-blue-200 px-2.5 py-0.5 text-[11px] font-bold text-blue-800">
+            Fonte Oficial CNJ
           </span>
         </div>
 
@@ -290,7 +294,7 @@ async function TabVisaoGeral({
 
         {assuntos.length > 0 && (
           <div className="mt-4 pt-3 border-t border-slate-100">
-            <p className="label">Assuntos CNJ</p>
+            <p className="label">Assuntos CNJ (Tabela Processual Unificada)</p>
             <div className="mt-1 flex flex-wrap gap-1.5">
               {assuntos.map((assunto, i) => (
                 <span
@@ -303,6 +307,11 @@ async function TabVisaoGeral({
             </div>
           </div>
         )}
+
+        <div className="mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-500 flex items-center gap-1.5">
+          <Info className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+          <span>A API pública do CNJ fornece dados cadastrais e movimentações padronizadas, sem acesso a cópias de petições ou PDFs.</span>
+        </div>
       </section>
 
       {/* 2. Grid com Partes e Gestão Interna */}
@@ -314,14 +323,18 @@ async function TabVisaoGeral({
               <Users className="w-5 h-5 text-slate-500" />
               <h2 className="text-base font-black text-slate-900">Partes Envolvidas</h2>
             </div>
-            <span className="text-xs text-slate-500">{parties.length} registradas</span>
+            <span className="text-xs text-slate-500">{parties.length} vinculadas</span>
           </div>
 
           <div className="mt-3 space-y-2">
             {parties.length === 0 ? (
-              <p className="text-xs text-slate-500 py-3">
-                Nenhuma parte vinculada ainda. Preencha abaixo para cadastrar polos ativo/passivo.
-              </p>
+              <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-3 text-xs text-slate-600 space-y-1">
+                <p className="font-bold text-slate-800">Partes não indexadas na API pública</p>
+                <p>
+                  O tribunal frequentemente oculta a qualificação das partes na API pública por cumprimento à LGPD e provimentos locais do CNJ.
+                  Utilize o formulário abaixo para vincular autor, réu ou litisconsortes com precisão.
+                </p>
+              </div>
             ) : (
               parties.map((p, idx) => (
                 <div
@@ -382,7 +395,7 @@ async function TabVisaoGeral({
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2 text-sm">
             <div>
-              <p className="label">Empresa</p>
+              <p className="label">Empresa do Grupo</p>
               <p className="font-bold">{company?.trade_name ?? company?.legal_name ?? "—"}</p>
             </div>
             <div>
@@ -464,7 +477,7 @@ async function TabAndamentos({ id }: { id: string }) {
   const [movementsRes, deadlinesRes, tasksRes] = await Promise.all([
     supabase
       .from("process_movements")
-      .select("id,movement_date,movement_code,movement_type,description,source,ai_summary,ai_relevance")
+      .select("id,movement_date,movement_code,movement_type,description,source,ai_summary,ai_relevance,raw_data")
       .eq("process_id", id)
       .order("movement_date", { ascending: false })
       .limit(100),
@@ -490,13 +503,13 @@ async function TabAndamentos({ id }: { id: string }) {
 
   return (
     <div className="space-y-6">
-      {/* Alerta de Transparência sobre DataJud */}
+      {/* Alerta de Transparência e Rigor sobre DataJud */}
       <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-4 text-xs text-blue-900 flex items-start gap-3">
         <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
         <div>
-          <strong className="block text-sm">Como funciona o sincronismo DataJud:</strong>
+          <strong className="block text-sm">Metodologia de Prazos e Andamentos:</strong>
           As movimentações abaixo são extraídas da base oficial do CNJ (Tabelas Processuais Unificadas - TPU). 
-          Os prazos e tarefas são gerenciados internamente ou sugeridos pela inteligência artificial.
+          <strong> Prazos gerados pela IA são sugestões preventivas e não possuem efeito preclusivo sem a conferência e validação formal do advogado responsável.</strong>
         </div>
       </div>
 
@@ -506,7 +519,7 @@ async function TabAndamentos({ id }: { id: string }) {
           <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
             <Clock className="w-5 h-5 text-slate-500" />
             <h2 className="text-base font-black text-slate-900">
-              Prazos e Tarefas Pendentes
+              Prazos e Tarefas Pendentes de Validação
             </h2>
           </div>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -518,11 +531,14 @@ async function TabAndamentos({ id }: { id: string }) {
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-orange-900">{d.title}</span>
                   <span className="rounded bg-orange-200 px-2 py-0.5 text-[11px] font-bold text-orange-800 uppercase">
-                    Prazo: {d.status}
+                    {d.status === "pending_confirmation" ? "Requer Confirmação" : d.status}
                   </span>
                 </div>
                 <p className="mt-1 text-xs text-slate-600">
-                  Vencimento: {new Date(d.due_at).toLocaleDateString("pt-BR")} · Prioridade: {d.priority}
+                  Data Limite: {new Date(d.due_at).toLocaleDateString("pt-BR")} · Prioridade: {d.priority} ·{" "}
+                  <span className="font-semibold text-amber-800">
+                    Origem: {d.origin === "AI" ? "Sugestão da IA" : d.origin}
+                  </span>
                 </p>
               </div>
             ))}
@@ -565,41 +581,61 @@ async function TabAndamentos({ id }: { id: string }) {
           </EmptyState>
         ) : (
           <div className="mt-4 space-y-3">
-            {movements.map((m) => (
-              <div
-                key={m.id}
-                className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-slate-300 transition"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="rounded bg-blue-100 px-2 py-0.5 text-xs font-bold text-blue-800">
-                      {m.source}
-                    </span>
-                    {m.movement_code && (
-                      <span className="text-xs text-slate-400 font-mono">
-                        Cód. {m.movement_code}
+            {movements.map((m) => {
+              const raw = (m.raw_data as Record<string, unknown>) || {};
+              const isDecisao =
+                raw.requer_documento_pdf === true ||
+                raw.naturezaAto === "decisao" ||
+                raw.natureza_ato === "decisao" ||
+                /\b(senten[cç]a|decis[aã]o|tutela|liminar|ac[oó]rd[aã]o)\b/i.test(m.movement_type);
+
+              return (
+                <div
+                  key={m.id}
+                  className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-slate-300 transition"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="rounded bg-blue-100 px-2 py-0.5 text-xs font-bold text-blue-800">
+                        {m.source}
                       </span>
-                    )}
-                    <span className="text-sm font-bold text-slate-900">{m.movement_type}</span>
-                  </div>
-                  <span className="text-xs font-semibold text-slate-500">
-                    {new Date(m.movement_date).toLocaleString("pt-BR")}
-                  </span>
-                </div>
-
-                <p className="mt-2 text-sm text-slate-700 whitespace-pre-wrap">{m.description}</p>
-
-                {m.ai_summary && (
-                  <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 p-2.5 text-xs text-slate-700 flex items-start gap-2">
-                    <Bot className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
-                    <div>
-                      <span className="font-bold text-slate-900">Análise da IA: </span>
-                      {m.ai_summary}
+                      {m.movement_code && (
+                        <span className="text-xs text-slate-400 font-mono">
+                          TPU {m.movement_code}
+                        </span>
+                      )}
+                      <span className="text-sm font-bold text-slate-900">{m.movement_type}</span>
                     </div>
+                    <span className="text-xs font-semibold text-slate-500">
+                      {new Date(m.movement_date).toLocaleString("pt-BR")}
+                    </span>
                   </div>
-                )}
-              </div>
-            ))}
+
+                  <p className="mt-2 text-sm text-slate-700 whitespace-pre-wrap">{m.description}</p>
+
+                  {/* Alerta de transparência para decisões judiciais */}
+                  {isDecisao && (
+                    <div className="mt-2.5 rounded-lg border border-amber-200 bg-amber-50/70 p-2.5 text-xs text-amber-900 flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-bold">Ato Decisório: </span>
+                        O teor integral da decisão não é disponibilizado na API pública do CNJ. Faça o upload da cópia em PDF na aba <strong>Documentos</strong> para que a IA analise o mérito da decisão.
+                      </div>
+                    </div>
+                  )}
+
+                  {m.ai_summary && (
+                    <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 p-2.5 text-xs text-slate-700 flex items-start gap-2">
+                      <Bot className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-bold text-slate-900">Análise da IA: </span>
+                        {m.ai_summary}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </section>
@@ -627,9 +663,9 @@ async function TabDocumentos({ id }: { id: string }) {
       <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 text-xs text-amber-900 flex items-start gap-3">
         <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
         <div>
-          <strong className="block text-sm">Importante sobre documentos e PDFs:</strong>
+          <strong className="block text-sm">Rigor Técnico sobre Documentos:</strong>
           A API Pública do DataJud <strong>não fornece arquivos de petições, sentenças ou PDFs dos autos</strong>.
-          Para que a inteligência artificial analise peças, contratos e laudos, você deve anexar os arquivos diretamente aqui ou no módulo de documentos.
+          Para que a inteligência artificial leia peças, contratos e laudos e responda com 100% de fidelidade, anexe os arquivos em PDF abaixo.
         </div>
       </div>
 
@@ -732,6 +768,15 @@ async function TabFinanceiro({
 
   return (
     <div className="space-y-6">
+      {/* Alerta de Precisão Contábil */}
+      <div className="rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-600 flex items-start gap-3 shadow-sm">
+        <Shield className="w-5 h-5 text-slate-500 shrink-0 mt-0.5" />
+        <div>
+          <strong className="block text-sm text-slate-800">Diretriz de Rigor Contábil (CPC 25):</strong>
+          O valor da causa reflete a estimativa protocolada na petição inicial perante o tribunal. Os valores de contingência (provável, possível, remota), depósitos recursais e provisão são calculados pela controladoria jurídica interna e auditados para conformidade fiscal e societária da Santa Lúcia.
+        </div>
+      </div>
+
       {/* Cards de Métricas Financeiras */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
@@ -742,12 +787,12 @@ async function TabFinanceiro({
         <MetricCard
           label="Exposição Estimada"
           value={money.format(Number(process.estimated_exposure ?? 0))}
-          sub="Cálculo de risco potencial"
+          sub="Cálculo interno de risco potencial"
         />
         <MetricCard
           label="Provisão Contábil (CPC 25)"
           value={money.format(Number(process.provision ?? 0))}
-          sub={`Risco classificado: ${String(process.risk_level ?? "Não classificado")}`}
+          sub={`Classificação: ${String(process.risk_level ?? "Não classificado")}`}
         />
         <MetricCard
           label="Acordo / Condenação"
@@ -767,7 +812,7 @@ async function TabFinanceiro({
             </h2>
           </div>
           <p className="mt-2 text-xs text-slate-500">
-            Ajuste o nível de probabilidade (remota, possível, provável) e impacto estimado com motivo formal.
+            Ajuste a probabilidade (remota, possível, provável) e impacto estimado com justificativa técnica formal.
           </p>
           <div className="mt-3">
             <RiskForm id={id} current={String(process.risk_level ?? "medium")} />

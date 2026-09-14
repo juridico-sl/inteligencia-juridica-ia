@@ -18,8 +18,18 @@ export function ProcessCreate({ options, open=false }: { options: Options; open?
     event.preventDefault(); setBusy(true); setMessage("");
     const body = Object.fromEntries(new FormData(event.currentTarget));
     const response = await fetch("/api/v1/processes", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-    const result = await response.json(); setBusy(false);
-    if (!response.ok) return setMessage(result.error ?? "Falha ao cadastrar");
+    const result = await response.json();
+    if (!response.ok) {
+      setBusy(false);
+      return setMessage(result.error ?? "Falha ao cadastrar");
+    }
+    try {
+      // Trigger instant official sync with DataJud
+      await fetch(`/api/v1/processes/${result.id}/refresh`, { method: "POST" });
+    } catch {
+      // Non-fatal, sync can be retried on the detail page
+    }
+    setBusy(false);
     router.push(`/processos/${result.id}`); router.refresh();
   }
   return <details id="novo" open={open} className="card p-4"><summary className="cursor-pointer font-bold">Cadastrar processo</summary><form className="mt-4 grid gap-4 md:grid-cols-2" onSubmit={submit}>

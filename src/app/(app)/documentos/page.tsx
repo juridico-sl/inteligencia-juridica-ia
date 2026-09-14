@@ -54,9 +54,15 @@ export default async function DocumentsPage({
   return (
     <>
       <PageHeader
-        title="Documentos"
-        description="Gestão, validação segura, extração automatizada e RAG de documentos jurídicos."
+        title="Repositório de Documentos"
+        description="Armazenamento seguro, extração de texto, OCR e análise jurídica de peças e contratos."
       />
+
+      <div className="mb-5 rounded-xl border border-slate-200 bg-slate-50 p-3.5 text-xs text-slate-600 flex items-center justify-between gap-3">
+        <p>
+          <strong className="text-slate-800">Nota técnica sobre integridade:</strong> Os documentos abaixo provêm de uploads manuais da equipe ou integrações diretas do escritório. A API pública do DataJud (CNJ) não armazena nem fornece cópias integrais de petições, sentenças ou arquivos PDF dos tribunais.
+        </p>
+      </div>
 
       <DocumentUpload processes={processes ?? []} />
 
