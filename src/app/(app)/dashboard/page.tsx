@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Scale, TrendingDown, Landmark, Clock, Plus } from "lucide-react";
 import { KpiCard, PageHeader, TrafficLight } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardCharts } from "@/components/dashboard-charts";
@@ -69,7 +70,8 @@ export default async function DashboardPage({
               Sincronismo Ativo
             </span>
             <Link href="/processos?novo=1" className="button text-sm">
-              + Novo Processo
+              <Plus className="w-4 h-4" />
+              <span>Novo Processo</span>
             </Link>
           </div>
         }
@@ -137,28 +139,28 @@ export default async function DashboardPage({
           value={metrics.active}
           tone="brand"
           subtitle="Em tramitação no Judiciário"
-          icon={<span>⚖️</span>}
+          icon={<Scale className="w-5 h-5 text-slate-500" />}
         />
         <KpiCard
           label="Exposição Estimada"
           value={money.format(metrics.exposure)}
           tone="danger"
           subtitle="Risco financeiro potencial"
-          icon={<span>📉</span>}
+          icon={<TrendingDown className="w-5 h-5 text-slate-500" />}
         />
         <KpiCard
           label="Provisão Contábil"
           value={money.format(metrics.provision)}
           tone="neutral"
           subtitle="Conforme norma CPC 25"
-          icon={<span>🏦</span>}
+          icon={<Landmark className="w-5 h-5 text-slate-500" />}
         />
         <KpiCard
           label="Prazos Fatais Iminentes"
           value={metrics.deadlines}
           tone={metrics.overdue > 0 ? "danger" : metrics.deadlines > 0 ? "warning" : "success"}
           subtitle={`${metrics.overdue} vencidos pendentes`}
-          icon={<span>⏰</span>}
+          icon={<Clock className="w-5 h-5 text-slate-500" />}
         />
       </section>
 

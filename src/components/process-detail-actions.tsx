@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { RefreshCw } from "lucide-react";
 
 export function RefreshProcess({ id }: { id: string }) {
   const [message, setMessage] = useState("");
@@ -45,7 +46,8 @@ export function RefreshProcess({ id }: { id: string }) {
           </>
         ) : (
           <>
-            <span>⚡ Sincronizar DataJud</span>
+            <RefreshCw className="w-4 h-4 text-white" />
+            <span>Sincronizar DataJud</span>
           </>
         )}
       </button>

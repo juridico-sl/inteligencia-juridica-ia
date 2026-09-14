@@ -1,5 +1,25 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import {
+  FileText,
+  Activity,
+  FolderOpen,
+  DollarSign,
+  Bot,
+  Check,
+  Landmark,
+  Users,
+  Building2,
+  FileEdit,
+  Clock,
+  ScrollText,
+  AlertTriangle,
+  Scale,
+  Info,
+  Shield,
+  ShieldAlert,
+  type LucideIcon,
+} from "lucide-react";
 import { PageHeader, EmptyState } from "@/components/ui";
 import { RefreshProcess, RiskForm, ProcessEditForm, FinancialForm } from "@/components/process-detail-actions";
 import { getProcess } from "@/lib/data/processes";
@@ -25,11 +45,11 @@ const TAB_ALIASES: Record<string, string> = {
 const VALID_TABS = ["visao-geral", "andamentos", "documentos", "financeiro"] as const;
 type TabKey = typeof VALID_TABS[number];
 
-const TAB_LABELS: Record<TabKey, { label: string; icon: string }> = {
-  "visao-geral": { label: "Visão Geral & Dados Oficiais", icon: "🏛️" },
-  andamentos: { label: "Andamentos & Prazos", icon: "⚡" },
-  documentos: { label: "Documentos & Peças", icon: "📁" },
-  financeiro: { label: "Risco & Financeiro", icon: "💰" },
+const TAB_LABELS: Record<TabKey, { label: string; icon: LucideIcon }> = {
+  "visao-geral": { label: "Visão Geral & Dados Oficiais", icon: FileText },
+  andamentos: { label: "Andamentos & Prazos", icon: Activity },
+  documentos: { label: "Documentos & Peças", icon: FolderOpen },
+  financeiro: { label: "Risco & Financeiro", icon: DollarSign },
 };
 
 const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
@@ -69,7 +89,8 @@ export default async function ProcessPage({
             </span>
             {process.last_synced_at && (
               <span className="rounded bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800 flex items-center gap-1">
-                <span>✓</span> Sincronizado com DataJud
+                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Sincronizado com DataJud</span>
               </span>
             )}
             <span className="rounded bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-700 capitalize">
@@ -90,20 +111,24 @@ export default async function ProcessPage({
             href={`/chat?process_id=${id}`}
             className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition"
           >
-            <span>🤖</span> Conversar com IA
+            <Bot className="w-4 h-4 text-slate-500" />
+            <span>Conversar com IA</span>
           </Link>
           <RefreshProcess id={id} />
         </div>
       </div>
 
       {process.last_sync_error && (
-        <div className="card mb-4 border-l-4 border-l-amber-500 bg-amber-50/50 p-4 text-sm text-amber-900">
-          <p className="font-bold">Aviso de sincronização do DataJud:</p>
-          <p className="mt-0.5 text-xs">{process.last_sync_error}</p>
-          <p className="mt-1 text-[11px] text-amber-700">
-            Dados anteriores preservados. Último sucesso:{" "}
-            {process.last_synced_at ? new Date(process.last_synced_at).toLocaleString("pt-BR") : "nenhum"}.
-          </p>
+        <div className="card mb-4 border-l-4 border-l-amber-500 bg-amber-50/50 p-4 text-sm text-amber-900 flex items-start gap-3">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-bold">Aviso de sincronização do DataJud:</p>
+            <p className="mt-0.5 text-xs">{process.last_sync_error}</p>
+            <p className="mt-1 text-[11px] text-amber-700">
+              Dados anteriores preservados. Último sucesso:{" "}
+              {process.last_synced_at ? new Date(process.last_synced_at).toLocaleString("pt-BR") : "nenhum"}.
+            </p>
+          </div>
         </div>
       )}
 
@@ -113,7 +138,7 @@ export default async function ProcessPage({
         aria-label="Navegação do processo"
       >
         {VALID_TABS.map((tabKey) => {
-          const { label, icon } = TAB_LABELS[tabKey];
+          const { label, icon: TabIcon } = TAB_LABELS[tabKey];
           const active = currentTab === tabKey;
           return (
             <Link
@@ -125,7 +150,7 @@ export default async function ProcessPage({
                   : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-800"
               }`}
             >
-              <span>{icon}</span>
+              <TabIcon className={`w-4 h-4 ${active ? "text-orange-600" : "text-slate-400"}`} />
               <span>{label}</span>
             </Link>
           );
@@ -152,16 +177,6 @@ export default async function ProcessPage({
 
       {currentTab === "financeiro" && <TabFinanceiro process={process} id={id} />}
     </>
-  );
-}
-
-function MetricCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</p>
-      <p className="mt-1 text-lg font-black text-slate-900">{value}</p>
-      {sub && <p className="mt-0.5 text-xs text-slate-500">{sub}</p>}
-    </div>
   );
 }
 
@@ -207,10 +222,10 @@ async function TabVisaoGeral({
   return (
     <div className="space-y-6">
       {/* 1. Bloco de Dados Oficiais CNJ / DataJud */}
-      <section className="card p-5 border-l-4 border-l-blue-600">
+      <section className="card p-5 border-l-4 border-l-blue-600 bg-white">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
-            <span className="text-lg">🏛️</span>
+            <Landmark className="w-5 h-5 text-slate-500" />
             <h2 className="text-base font-black text-slate-900">
               Dados Oficiais do Poder Judiciário (DataJud)
             </h2>
@@ -257,9 +272,19 @@ async function TabVisaoGeral({
           </div>
           <div>
             <p className="label">Nível de Sigilo</p>
-            <p className="font-bold text-slate-800">
-              {metadata.nivel_sigilo ? "🔒 Segredo de Justiça" : "🔓 Processo Público"}
-            </p>
+            <div className="flex items-center gap-1.5 font-bold text-slate-800">
+              {metadata.nivel_sigilo ? (
+                <>
+                  <ShieldAlert className="w-4 h-4 text-amber-600" />
+                  <span>Segredo de Justiça</span>
+                </>
+              ) : (
+                <>
+                  <Shield className="w-4 h-4 text-emerald-600" />
+                  <span>Processo Público</span>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
@@ -283,9 +308,12 @@ async function TabVisaoGeral({
       {/* 2. Grid com Partes e Gestão Interna */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Bloco de Partes */}
-        <section className="card p-5">
+        <section className="card p-5 bg-white">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <h2 className="text-base font-black text-slate-900">👥 Partes Envolvidas</h2>
+            <div className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-slate-500" />
+              <h2 className="text-base font-black text-slate-900">Partes Envolvidas</h2>
+            </div>
             <span className="text-xs text-slate-500">{parties.length} registradas</span>
           </div>
 
@@ -344,10 +372,13 @@ async function TabVisaoGeral({
         </section>
 
         {/* Bloco de Gestão Interna & Monitoramento */}
-        <section className="card p-5">
-          <h2 className="text-base font-black text-slate-900 pb-3 border-b border-slate-100">
-            🏢 Gestão Interna & Responsáveis
-          </h2>
+        <section className="card p-5 bg-white">
+          <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+            <Building2 className="w-5 h-5 text-slate-500" />
+            <h2 className="text-base font-black text-slate-900">
+              Gestão Interna & Responsáveis
+            </h2>
+          </div>
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2 text-sm">
             <div>
@@ -383,10 +414,13 @@ async function TabVisaoGeral({
       </div>
 
       {/* 3. Bloco de Notas Internas da Equipe */}
-      <section className="card p-5">
-        <h2 className="text-base font-black text-slate-900 pb-3 border-b border-slate-100">
-          📝 Notas & Observações Internas
-        </h2>
+      <section className="card p-5 bg-white">
+        <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+          <FileEdit className="w-5 h-5 text-slate-500" />
+          <h2 className="text-base font-black text-slate-900">
+            Notas & Observações Internas
+          </h2>
+        </div>
 
         <form action={addNote} className="mt-4 space-y-2">
           <input type="hidden" name="process_id" value={id} />
@@ -458,7 +492,7 @@ async function TabAndamentos({ id }: { id: string }) {
     <div className="space-y-6">
       {/* Alerta de Transparência sobre DataJud */}
       <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-4 text-xs text-blue-900 flex items-start gap-3">
-        <span className="text-base">ℹ️</span>
+        <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
         <div>
           <strong className="block text-sm">Como funciona o sincronismo DataJud:</strong>
           As movimentações abaixo são extraídas da base oficial do CNJ (Tabelas Processuais Unificadas - TPU). 
@@ -468,10 +502,13 @@ async function TabAndamentos({ id }: { id: string }) {
 
       {/* Resumo de Prazos e Tarefas Ativas */}
       {(deadlines.length > 0 || tasks.length > 0) && (
-        <section className="card p-5 border-l-4 border-l-orange-500">
-          <h2 className="text-base font-black text-slate-900 pb-2 border-b border-slate-100">
-            ⏰ Prazos e Tarefas Pendentes
-          </h2>
+        <section className="card p-5 border-l-4 border-l-orange-500 bg-white">
+          <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+            <Clock className="w-5 h-5 text-slate-500" />
+            <h2 className="text-base font-black text-slate-900">
+              Prazos e Tarefas Pendentes
+            </h2>
+          </div>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             {deadlines.map((d) => (
               <div
@@ -511,11 +548,14 @@ async function TabAndamentos({ id }: { id: string }) {
       )}
 
       {/* Linha do Tempo Oficial de Movimentações */}
-      <section className="card p-5">
+      <section className="card p-5 bg-white">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-          <h2 className="text-base font-black text-slate-900">
-            📜 Histórico Oficial de Movimentações ({movements.length})
-          </h2>
+          <div className="flex items-center gap-2">
+            <ScrollText className="w-5 h-5 text-slate-500" />
+            <h2 className="text-base font-black text-slate-900">
+              Histórico Oficial de Movimentações ({movements.length})
+            </h2>
+          </div>
           <span className="text-xs text-slate-500">Ordenado por data decrescente</span>
         </div>
 
@@ -550,9 +590,12 @@ async function TabAndamentos({ id }: { id: string }) {
                 <p className="mt-2 text-sm text-slate-700 whitespace-pre-wrap">{m.description}</p>
 
                 {m.ai_summary && (
-                  <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 p-2.5 text-xs text-slate-700">
-                    <span className="font-bold text-slate-900">🤖 Análise da IA: </span>
-                    {m.ai_summary}
+                  <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 p-2.5 text-xs text-slate-700 flex items-start gap-2">
+                    <Bot className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold text-slate-900">Análise da IA: </span>
+                      {m.ai_summary}
+                    </div>
                   </div>
                 )}
               </div>
@@ -582,7 +625,7 @@ async function TabDocumentos({ id }: { id: string }) {
     <div className="space-y-6">
       {/* Banner de Rigor Metodológico */}
       <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 text-xs text-amber-900 flex items-start gap-3">
-        <span className="text-base">⚠️</span>
+        <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
         <div>
           <strong className="block text-sm">Importante sobre documentos e PDFs:</strong>
           A API Pública do DataJud <strong>não fornece arquivos de petições, sentenças ou PDFs dos autos</strong>.
@@ -590,13 +633,16 @@ async function TabDocumentos({ id }: { id: string }) {
         </div>
       </div>
 
-      <section className="card p-5">
+      <section className="card p-5 bg-white">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div>
-            <h2 className="text-base font-black text-slate-900">
-              📁 Peças Anexadas ao Processo ({docs.length})
-            </h2>
-            <p className="text-xs text-slate-500">Documentos lidos por OCR e indexados para IA</p>
+            <div className="flex items-center gap-2">
+              <FolderOpen className="w-5 h-5 text-slate-500" />
+              <h2 className="text-base font-black text-slate-900">
+                Peças Anexadas ao Processo ({docs.length})
+              </h2>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">Documentos lidos por OCR e indexados para IA</p>
           </div>
           <Link
             href="/documentos"
@@ -713,10 +759,13 @@ async function TabFinanceiro({
       {/* Formulários e Histórico de Risco e Financeiro */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Gestão de Risco */}
-        <section className="card p-5">
-          <h2 className="text-base font-black text-slate-900 pb-3 border-b border-slate-100">
-            ⚖️ Classificação de Risco Processual
-          </h2>
+        <section className="card p-5 bg-white">
+          <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+            <Scale className="w-5 h-5 text-slate-500" />
+            <h2 className="text-base font-black text-slate-900">
+              Classificação de Risco Processual
+            </h2>
+          </div>
           <p className="mt-2 text-xs text-slate-500">
             Ajuste o nível de probabilidade (remota, possível, provável) e impacto estimado com motivo formal.
           </p>
@@ -745,10 +794,13 @@ async function TabFinanceiro({
         </section>
 
         {/* Lançamento Financeiro */}
-        <section className="card p-5">
-          <h2 className="text-base font-black text-slate-900 pb-3 border-b border-slate-100">
-            💵 Gestão Financeira & Provisões
-          </h2>
+        <section className="card p-5 bg-white">
+          <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+            <DollarSign className="w-5 h-5 text-slate-500" />
+            <h2 className="text-base font-black text-slate-900">
+              Gestão Financeira & Provisões
+            </h2>
+          </div>
           <p className="mt-2 text-xs text-slate-500">
             Atualize provisões, valores de causa, depósitos judiciais ou acordos.
           </p>
@@ -776,6 +828,16 @@ async function TabFinanceiro({
           </div>
         </section>
       </div>
+    </div>
+  );
+}
+
+function MetricCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</p>
+      <p className="mt-1 text-lg font-black text-slate-900">{value}</p>
+      {sub && <p className="mt-0.5 text-xs text-slate-500">{sub}</p>}
     </div>
   );
 }

@@ -1,38 +1,60 @@
 import Link from "next/link";
+import {
+  LayoutDashboard,
+  Scale,
+  Activity,
+  Clock,
+  FolderOpen,
+  Bot,
+  Building2,
+  BarChart3,
+  Search,
+  BookOpen,
+  Bell,
+  Settings,
+  LogOut,
+  LucideIcon,
+} from "lucide-react";
 import { logout } from "@/app/(auth)/login/actions";
 import { Shortcuts } from "@/components/shortcuts";
 
+interface NavItem {
+  label: string;
+  href: string;
+  icon: LucideIcon;
+}
+
 interface NavSection {
   title: string;
-  items: { label: string; href: string; icon: string }[];
+  items: NavItem[];
 }
 
 const navSections: NavSection[] = [
   {
     title: "Operação",
     items: [
-      { label: "Painel Geral", href: "/dashboard", icon: "📊" },
-      { label: "Processos", href: "/processos", icon: "⚖️" },
-      { label: "Andamentos DataJud", href: "/movimentacoes", icon: "⚡" },
-      { label: "Prazos & Tarefas", href: "/prazos", icon: "⏰" },
-      { label: "Documentos", href: "/documentos", icon: "📁" },
-      { label: "Assistente IA", href: "/chat", icon: "🤖" },
+      { label: "Painel Geral", href: "/dashboard", icon: LayoutDashboard },
+      { label: "Processos", href: "/processos", icon: Scale },
+      { label: "Andamentos DataJud", href: "/movimentacoes", icon: Activity },
+      { label: "Prazos & Tarefas", href: "/prazos", icon: Clock },
+      { label: "Documentos", href: "/documentos", icon: FolderOpen },
+      { label: "Assistente IA", href: "/chat", icon: Bot },
     ],
   },
   {
     title: "Gestão",
     items: [
-      { label: "Empresas & Escritórios", href: "/empresas", icon: "🏢" },
-      { label: "Relatórios & Métricas", href: "/relatorios", icon: "📈" },
-      { label: "Casos Semelhantes", href: "/casos-semelhantes", icon: "🔍" },
-      { label: "Base de Conhecimento", href: "/conhecimento", icon: "📚" },
+      { label: "Empresas & Escritórios", href: "/empresas", icon: Building2 },
+      { label: "Relatórios & Métricas", href: "/relatorios", icon: BarChart3 },
+      { label: "Casos Semelhantes", href: "/casos-semelhantes", icon: Search },
+      { label: "Base de Conhecimento", href: "/conhecimento", icon: BookOpen },
     ],
   },
   {
     title: "Sistema",
     items: [
-      { label: "Alertas & Notificações", href: "/alertas", icon: "🔔" },
-      { label: "Administração", href: "/admin", icon: "⚙️" },
+      { label: "Alertas & Notificações", href: "/alertas", icon: Bell },
+      { label: "Administração", href: "/admin", icon: Settings },
     ],
   },
 ];
@@ -55,20 +77,23 @@ export function AppShell({ children, name }: { children: React.ReactNode; name: 
           <nav aria-label="Navegação principal" className="p-3 space-y-4">
             {navSections.map((section) => (
               <div key={section.title}>
-                <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                <p className="px-3 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   {section.title}
                 </p>
                 <div className="flex gap-1 overflow-x-auto lg:block lg:space-y-0.5">
-                  {section.items.map((item) => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className="flex items-center gap-2.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800/80 hover:text-white transition"
-                    >
-                      <span className="text-base">{item.icon}</span>
-                      <span>{item.label}</span>
-                    </Link>
-                  ))}
+                  {section.items.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className="group flex items-center gap-2.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800/80 hover:text-white transition"
+                      >
+                        <Icon className="w-4 h-4 text-slate-400 group-hover:text-slate-200 transition-colors shrink-0" />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
             ))}
@@ -83,10 +108,11 @@ export function AppShell({ children, name }: { children: React.ReactNode; name: 
             </div>
             <form action={logout}>
               <button
-                className="rounded px-2.5 py-1 text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-red-400 transition"
+                className="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-red-400 transition"
                 title="Encerrar sessão"
               >
-                Sair
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Sair</span>
               </button>
             </form>
           </div>
