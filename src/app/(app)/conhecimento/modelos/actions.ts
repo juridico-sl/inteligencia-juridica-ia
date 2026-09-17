@@ -6,10 +6,11 @@ import { MimoClient } from "@/lib/ai/client";
 import { requirePermission } from "@/lib/auth";
 import { audit } from "@/lib/security";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function approveTemplate(form: FormData) {
-  const {user}=await requirePermission("admin.settings"),id=z.uuid().parse(form.get("id")),supabase=await createClient(),{error}=await supabase.from("knowledge_items").update({approved_by:user.id,approved_at:new Date().toISOString()}).eq("id",id).eq("type","modelo").is("deleted_at",null);
-  if(error)throw new Error("Não foi possível aprovar o modelo");await audit("approve","knowledge_item",id);revalidatePath("/conhecimento/modelos");
+  const {user}=await requirePermission("admin.settings"),id=z.uuid().parse(form.get("id")),{data,error}=await createAdminClient().from("knowledge_items").update({approved_by:user.id,approved_at:new Date().toISOString()}).eq("id",id).eq("type","modelo").is("deleted_at",null).select("id").single();
+  if(error||!data)throw new Error("Não foi possível aprovar o modelo");await audit("approve","knowledge_item",id);revalidatePath("/conhecimento/modelos");
 }
 
 export async function generateDraft(form: FormData) {

@@ -91,9 +91,10 @@ export function Chat({ processId }: { processId?: string }) {
             messageId = data.message_id;
           } else if (type === "chunk") {
             content += data.text;
+            const current = { content, sources, id: messageId };
             setMessages((v) => [
               ...v.slice(0, -1),
-              { role: "assistant", content, sources, id: messageId },
+              { role: "assistant", ...current },
             ]);
           }
         }

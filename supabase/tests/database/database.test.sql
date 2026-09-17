@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(19);
+select plan(33);
 
 select has_table('public','processes','processes existe');
 select has_table('public','document_chunks','chunks existem');
@@ -11,7 +11,7 @@ select ok((select relrowsecurity from pg_class where oid='public.processes'::reg
 select ok((select relrowsecurity from pg_class where oid='public.documents'::regclass),'RLS em documentos');
 select ok((select relrowsecurity from pg_class where oid='public.document_chunk_staging'::regclass),'RLS no staging documental');
 select is((select public from storage.buckets where id='legal-documents'),false,'Storage jurídico privado');
-select is((select count(*)::integer from pg_policies where schemaname='public' and tablename='processes'),3,'políticas de processos completas');
+select is((select count(*)::integer from pg_policies where schemaname='public' and tablename='processes'),2,'políticas de processos completas');
 select ok(not has_function_privilege('anon','public.claim_jobs(text,integer)','execute'),'anon não executa claim_jobs');
 select ok(not has_function_privilege('anon','public.audit_row_change()','execute'),'anon não executa função de auditoria');
 select ok(not has_function_privilege('authenticated','public.publish_domain_event()','execute'),'usuário não chama trigger de outbox');
@@ -21,6 +21,20 @@ select ok(has_function_privilege('authenticated','public.create_full_process(jso
 select ok((select reloptions @> array['security_invoker=true'] from pg_class where oid='public.process_list'::regclass),'view respeita RLS do invocador');
 select is((select column_default from information_schema.columns where table_schema='public' and table_name='deadlines' and column_name='status'),'''pending_confirmation''::deadline_status','prazo nasce pendente');
 select ok(exists(select 1 from pg_indexes where schemaname='public' and tablename='process_movements' and indexdef ilike '%process_id%content_hash%'),'movimentação deduplicada');
+select ok(not has_table_privilege('authenticated','public.processes','INSERT'),'cadastro direto de processos bloqueado');
+select ok(not has_column_privilege('authenticated','public.processes','risk_level','UPDATE'),'risco protegido por RPC');
+select ok(not has_column_privilege('authenticated','public.processes','claim_value','UPDATE'),'valor protegido por RPC');
+select ok(not has_table_privilege('authenticated','public.process_risk_history','INSERT'),'histórico de risco sem inserção direta');
+select ok(not has_table_privilege('authenticated','public.process_financial_history','INSERT'),'histórico financeiro sem inserção direta');
+select ok(has_column_privilege('authenticated','public.processes','notes','UPDATE'),'edição comum preservada');
+select ok(not has_table_privilege('authenticated','public.deadlines','UPDATE'),'prazo sem atualização direta');
+select ok(not has_table_privilege('authenticated','public.documents','INSERT'),'documento sem inserção direta');
+select ok(not has_table_privilege('authenticated','public.documents','UPDATE'),'documento sem edição direta');
+select ok(not has_column_privilege('authenticated','public.knowledge_items','approved_at','INSERT'),'aprovação não pode ser forjada no cadastro');
+select ok(not has_table_privilege('authenticated','public.knowledge_items','UPDATE'),'modelo aprovado não pode ser alterado diretamente');
+select ok(not has_table_privilege('authenticated','public.audit_logs','INSERT'),'auditoria sem inserção direta');
+select ok(has_table_privilege('service_role','public.audit_logs','INSERT'),'servidor registra auditoria');
+select ok(has_table_privilege('service_role','public.documents','UPDATE'),'servidor atualiza documentos');
 
 set local role anon;
 select is((select count(*)::bigint from public.roles),0::bigint,'anon não lê referência jurídica');

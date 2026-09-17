@@ -4,6 +4,7 @@ import { apiError } from "@/lib/http";
 import { processUpdateSchema } from "@/lib/schemas/process";
 import { audit } from "@/lib/security";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -34,9 +35,8 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
   try {
     const { user } = await authorizePermission("process.delete");
     const { id } = await params;
-    const supabase = await createClient();
-    const { error } = await supabase.from("processes").update({ deleted_at: new Date().toISOString(), deleted_by: user.id, monitoring_enabled: false }).eq("id", id).is("deleted_at", null);
-    if (error) throw error;
+    const { data, error } = await createAdminClient().from("processes").update({ deleted_at: new Date().toISOString(), deleted_by: user.id, monitoring_enabled: false }).eq("id", id).is("deleted_at", null).select("id").single();
+    if (error || !data) throw new Error("Processo não encontrado");
     await audit("archive", "process", id);
     return new NextResponse(null, { status: 204 });
   } catch (error) { return apiError(error); }

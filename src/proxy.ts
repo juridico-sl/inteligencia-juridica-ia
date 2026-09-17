@@ -17,7 +17,7 @@ function securityHeaders(response: NextResponse, nonce: string, development: boo
 
 export async function proxy(request: NextRequest) {
   const nonce = btoa(crypto.randomUUID());
-  const requestId = request.headers.get("x-request-id")?.slice(0, 64) ?? crypto.randomUUID();
+  const requestId = crypto.randomUUID();
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("x-request-id", requestId);
@@ -30,6 +30,7 @@ export async function proxy(request: NextRequest) {
     if (!origin || origin !== request.nextUrl.origin) return secure(NextResponse.json({ error: "Origem inválida" }, { status: 403 }));
   }
   let response = NextResponse.next({ request: { headers: requestHeaders } });
+  if (request.nextUrl.pathname === "/api/internal/documents/process") return secure(response);
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return secure(response);

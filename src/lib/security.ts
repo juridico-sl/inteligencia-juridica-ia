@@ -1,6 +1,7 @@
 import "server-only";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export function safeRedirectPath(value: unknown, fallback = "/dashboard") {
   return typeof value === "string" && /^\/(?!\/)[^\r\n]*$/.test(value) ? value : fallback;
@@ -17,13 +18,15 @@ export async function audit(action: string, resourceType: string, resourceId?: s
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
   const requestHeaders = await headers();
-  await supabase.from("audit_logs").insert({
+  const requestId = requestHeaders.get("x-request-id");
+  const { error } = await createAdminClient().from("audit_logs").insert({
     user_id: user.id,
     action,
     resource_type: resourceType,
     resource_id: resourceId,
     metadata,
-    request_id: requestHeaders.get("x-request-id") ?? undefined,
+    request_id: requestId && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(requestId) ? requestId : undefined,
     user_agent: requestHeaders.get("user-agent")?.slice(0, 300)
   });
+  if (error) throw new Error("Falha ao registrar auditoria");
 }

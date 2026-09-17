@@ -7,10 +7,16 @@ on:
         required: true
         type: choice
         options: [staging, production]
+      step:
+        description: Publique o código e confirme o deploy antes de aplicar migrations
+        required: true
+        type: choice
+        options: [web, database]
 permissions:
   contents: read
 jobs:
   migrate:
+    if: ${{ inputs.step == 'database' }}
     environment: ${{ inputs.environment }}
     runs-on: ubuntu-latest
     steps:
@@ -22,7 +28,7 @@ jobs:
       - run: supabase db push --linked
         env: { SUPABASE_ACCESS_TOKEN: "${{ secrets.SUPABASE_ACCESS_TOKEN }}", SUPABASE_DB_PASSWORD: "${{ secrets.SUPABASE_DB_PASSWORD }}" }
   deploy-web:
-    needs: migrate
+    if: ${{ inputs.step == 'web' }}
     environment: ${{ inputs.environment }}
     runs-on: ubuntu-latest
     steps:
